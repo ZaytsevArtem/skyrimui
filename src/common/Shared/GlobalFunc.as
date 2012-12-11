@@ -7,7 +7,7 @@ class Shared.GlobalFunc
 	private var debugBg:MovieClip = null;
 	private var debugTxt:TextField = null;
   
-	private var DEBUGLOG_HEIGHT:Number = 100;
+	private var DEBUGLOG_HEIGHT:Number = 200;
   
 	private static var inst:GlobalFunc = null;
 
@@ -45,7 +45,7 @@ class Shared.GlobalFunc
 		debugBg.endFill();
 		debugBg._alpha = 50;
 
-		debugTxt = debugWindow.createTextField("debugTxt", debugWindow.getNextHighestDepth(), 10, 10, (Stage.width/2) - 20, DEBUGLOG_HEIGHT-20);
+		debugTxt = debugWindow.createTextField("debugTxt", debugWindow.getNextHighestDepth(), 10, 10, Stage.width - 20, DEBUGLOG_HEIGHT-20);
 		debugTxt.embedFonts = true;
 		debugTxt.multiline = true;
 		debugTxt.wordWrap = false;
