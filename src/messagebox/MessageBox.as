@@ -30,6 +30,7 @@ class MessageBox extends MovieClip
 
 	var MessageBtnLabels: Array; // holds just the label strings
 	var lastTabIndex: Number = -1;
+	var setFocusIntervalId: Number = null;
 
 	function MessageBox()
 	{
@@ -55,6 +56,8 @@ class MessageBox extends MovieClip
 
 		//fabd: no longer used, see below
 		//var controllerOrConsole: Boolean = arguments[0];
+
+		//GlobalFunc.getInstance().Deebug("setupButtons() " + arguments.slice(1));
 
 		if (arguments.length > 1) {
 			ButtonContainer = createEmptyMovieClip("Buttons", getNextHighestDepth());
@@ -99,9 +102,26 @@ class MessageBox extends MovieClip
 		
 			//fabd: always enable the gamepad style navigation
 			//if (controllerOrConsole) {
-				Selection.setFocus(MessageButtons[0]);
+			//	Selection.setFocus(MessageButtons[0]);
 			//}
+
+			//fabd: temporary solution until I figure why setFocus() doesn't always work
+			setFocusIntervalId = setInterval(this, "focusItDammitWhatsWrongWithYou", 50);
 		}
+	}
+
+	//fabd: note for this workaround fix:
+	//      10ms NO! doesn't work
+	//      25ms NO! works in most cases but not at Enchanting Table "Ok" confirmation
+	//      50ms OK! in all reported cases.
+	function focusItDammitWhatsWrongWithYou(): Void
+	{
+		if (setFocusIntervalId !== null) {
+			clearInterval(setFocusIntervalId);
+			setFocusIntervalId = null;
+		}
+		//GlobalFunc.getInstance().Deebug("setInterval()! 50 MS VERSION");
+		Selection.setFocus(MessageButtons[0]);
 	}
 
 	function InitButtons(): Void
@@ -175,7 +195,7 @@ class MessageBox extends MovieClip
 	{
 		GameDelegate.call("PlaySound", ["UIMenuFocus"]);
 
-		//GlobalFunc.getInstance().Deebug("FocusCallback() " + this + " and " + aEvent.target._name);
+		//GlobalFunc.getInstance().Deebug("FocusCallback() " + (aEvent.target ? aEvent.target._name : 'woops'));
 
 		//fabd: move the highlight with the keyboard focus
 		for (var i:Number = 0; i < MessageButtons.length; i++) {
