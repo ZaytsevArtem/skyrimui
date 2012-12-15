@@ -1,8 +1,8 @@
 ﻿import gfx.io.GameDelegate;
 import gfx.controls.Button;
-import gfx.ui.NavigationCode;  //fabd++
-import gfx.ui.InputDetails;    //fabd++
-import Shared.GlobalFunc;      //fabd++
+import gfx.ui.NavigationCode;
+import gfx.ui.InputDetails;
+import Shared.GlobalFunc;
 
 class MessageBox extends MovieClip
 {
@@ -28,9 +28,15 @@ class MessageBox extends MovieClip
 	var Message: TextField;
 	var MessageButtons: Array;
 
-	var MessageBtnLabels: Array; // holds just the label strings
+	// Better MessageBox Controls
+	var MessageBtnLabels: Array;
 	var lastTabIndex: Number = -1;
 	var setFocusIntervalId: Number = null;
+	var exitLabels: Array = [
+	  // Button labels recognized by the TAB feature
+		'Return', 'Back', 'Exit', 'Cancel', 'No',
+		'Done'   // used by "Forgotten Mastery"
+	];
 
 	function MessageBox()
 	{
@@ -242,7 +248,6 @@ class MessageBox extends MovieClip
 	//fabd: cycle to the next "Exit" like button if present
 	function focusExitOrBackButtonIfPresent()
 	{
-		var aExitLabels: Array = ['Return', 'Back', 'Exit', 'Cancel', 'No'];
 		var b: Number, i:Number, j: Number;
 
 		for (i = 1; i <= MessageButtons.length; i++) {
@@ -252,8 +257,8 @@ class MessageBox extends MovieClip
 			if (b === lastTabIndex)
 				continue;
 
-			for (j = 0; j < aExitLabels.length; j++) {
-				if (aExitLabels[j] === MessageBtnLabels[b]) {
+			for (j = 0; j < exitLabels.length; j++) {
+				if (exitLabels[j] === MessageBtnLabels[b]) {
 					Selection.setFocus(MessageButtons[b]);
 					lastTabIndex = b;
 					return;
