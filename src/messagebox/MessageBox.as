@@ -28,6 +28,9 @@ class MessageBox extends MovieClip
 	var Message: TextField;
 	var MessageButtons: Array;
 
+	// expired6978's menu loader
+	var proxyMenu: MovieClip;
+
 	// Better MessageBox Controls
 	var MessageBtnLabels: Array;
 	var lastTabIndex: Number = -1;
@@ -154,6 +157,39 @@ class MessageBox extends MovieClip
 			Message.SetText(aText);
 		}
 		ResetDimensions();
+	
+		// check for custom menu (expired6978) 
+		ProcessMessage(aText);
+	}
+
+	/**
+	 * Menu loader code by expired6978, added for compatibility with upcoming mods.
+	 * Example:
+	 *   Debug.MessageBox("$$loadMovie=bla.swf$$")
+	 */
+	function ProcessMessage(aText)
+	{
+		if(aText.slice(0, 2) == "$$" && aText.slice(aText.length-2, aText.length) == "$$")
+		{
+			var command: String = aText.slice(2, aText.length-2);
+			var key = command.slice(0, command.indexOf("="));
+			if (key == undefined)
+				return;
+				
+			var val = command.slice(command.indexOf("=") + 1);
+			if (val == undefined)
+				return;
+				
+			if(key.toLowerCase() == "loadmovie")
+			{
+	      var MessageContainer: MovieClip = _root.MessageMenu;
+				MessageContainer._visible = false;
+				MessageContainer.enabled = false;
+				
+				proxyMenu = _root.createEmptyMovieClip(val, _root.getNextHighestDepth());
+				proxyMenu.loadMovie(val + ".swf");
+			}
+		}
 	}
 
 	function ResetDimensions(): Void
