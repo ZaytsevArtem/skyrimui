@@ -3,6 +3,7 @@ import gfx.controls.Button;
 import gfx.ui.NavigationCode;
 import gfx.ui.InputDetails;
 import Shared.GlobalFunc;
+import skse;
 
 class MessageBox extends MovieClip
 {
@@ -14,6 +15,10 @@ class MessageBox extends MovieClip
 	//fabd: subtle button text highlight with mouse and keyboard focus
 	static var SELECTION_ROLLOVER_ALPHA: Number = 100;
 	static var SELECTION_ROLLOUT_ALPHA: Number = 80;
+
+	//DirectX Scan Codes returned by SKSE
+	static var SKSE_KEY_ESC: Number = 0x01;
+	static var SKSE_KEY_TAB: Number = 0x0F;
 
   /* Stage Elements */
 	var MessageText: TextField;
@@ -114,6 +119,9 @@ class MessageBox extends MovieClip
 			//	Selection.setFocus(MessageButtons[0]);
 			//}
 
+			// reset tab index for TAB feature
+			lastTabIndex = -1;
+
 			//fabd: temporary solution until I figure why setFocus() doesn't always work
 			setFocusIntervalId = setInterval(this, "focusItDammitWhatsWrongWithYou", 50);
 		}
@@ -129,7 +137,6 @@ class MessageBox extends MovieClip
 			clearInterval(setFocusIntervalId);
 			setFocusIntervalId = null;
 		}
-		//GlobalFunc.getInstance().Deebug("setInterval()! 50 MS VERSION");
 		Selection.setFocus(MessageButtons[0]);
 	}
 
@@ -137,10 +144,10 @@ class MessageBox extends MovieClip
 	{
 		for (var i: Number = 0; i < MessageButtons.length; i++) {
 			MessageButtons[i].handlePress = function () {};
-			MessageButtons[i].addEventListener("press", ClickCallback);
+			MessageButtons[i].addEventListener("press", this, "ClickCallback");
 			MessageButtons[i].addEventListener("focusIn", this, "FocusCallback");
-			MessageButtons[i].addEventListener("rollOver", RollOverCallback);
-			MessageButtons[i].addEventListener("rollOut", RollOverCallback);
+			MessageButtons[i].addEventListener("rollOver", this, "RollOverCallback");
+			MessageButtons[i].addEventListener("rollOut", this, "RollOverCallback");
 			MessageButtons[i].ButtonText.noTranslate = true;
 		}
 	}
@@ -228,9 +235,15 @@ class MessageBox extends MovieClip
 		Divider._y = ButtonContainer._y - ButtonContainer._height / 2 - MessageBox.MESSAGE_TO_BUTTON_SPACER / 2;
 	}
 
+	// Returns the digit from the button name
+	function getButtonId(button: Button): Number
+	{
+		return Number(button._name.substr(-1))
+	}
+
 	function ClickCallback(aEvent: Object): Void
 	{
-		GameDelegate.call("buttonPress", [Number(aEvent.target._name.substr(-1))]);
+		GameDelegate.call("buttonPress", [getButtonId(aEvent.target)]);
 	}
 
 	function FocusCallback(aEvent: Object): Void
@@ -243,29 +256,30 @@ class MessageBox extends MovieClip
 		for (var i:Number = 0; i < MessageButtons.length; i++) {
 			var isFocused:Boolean = MessageButtons[i] === aEvent.target;
 			MessageButtons[i].ButtonText._alpha = isFocused ? MessageBox.SELECTION_ROLLOVER_ALPHA : MessageBox.SELECTION_ROLLOUT_ALPHA;
-		}
 
-		//fabd: cycle from here if pressing TAB
-		lastTabIndex = Number(aEvent.target._name.substr(-1));
+			if (MessageButtons[i] === aEvent.target) {
+				// cycle from here if pressing TAB
+				lastTabIndex = i;
+			}
+		}
 	}
 
 	//fabd: adds subtle highlight, and mouseover sets focus to avoid seeing two SelectionIndicator at once
 	function RollOverCallback(aEvent: Object): Void
 	{
 		//GlobalFunc.getInstance().Deebug("RollOverCallback() type = " + aEvent.type + " thisname " + this._name);
-
-		var b:Button = Button(this);
+		var b:Button = Button(aEvent.target);
 		b.ButtonText._alpha = aEvent.type == "rollOver" ?  MessageBox.SELECTION_ROLLOVER_ALPHA : MessageBox.SELECTION_ROLLOUT_ALPHA;
 
 		if (aEvent.type === "rollOver") {
-			Selection.setFocus(this);
+			Selection.setFocus(b);
 		}
 	}
 
 	function onKeyDown(): Void
 	{
 		var iKeyCode: Number = Key.getCode();
-		
+
 		//GlobalFunc.getInstance().Deebug("Pressed key code " + iKeyCode + " Ascii " + Key.getAscii() + " char " + String.fromCharCode(iKeyCode));
 
 		if (iKeyCode == 89 && MessageButtons[0].ButtonText.text == "Yes") {
@@ -282,65 +296,56 @@ class MessageBox extends MovieClip
 	}
 
 	//fabd: cycle to the next "Exit" like button if present
-	function focusExitOrBackButtonIfPresent()
+	function findNextExitButton(iStartFrom: Number): Number
 	{
 		var b: Number, i:Number, j: Number;
 
+		if (iStartFrom === undefined) {
+			iStartFrom = -1;
+		}
+
 		for (i = 1; i <= MessageButtons.length; i++) {
 			// cycle between buttons, so wraparound
-			b = (lastTabIndex + i) % MessageButtons.length;
+			b = (iStartFrom + i) % MessageButtons.length;
 
-			if (b === lastTabIndex)
+			if (b === iStartFrom)
 				continue;
 
 			for (j = 0; j < exitLabels.length; j++) {
 				if (exitLabels[j] === MessageBtnLabels[b]) {
 					Selection.setFocus(MessageButtons[b]);
-					lastTabIndex = b;
-					return;
-				}
-			}
-		}
-	}
-
-	//fabd: returns the index of a button which has an "Exit" meaning, or -1 (may enable later with SKSE)
-	/*
-	function findExitButtonIndex(): Number
-	{
-		var aCancelLabels: Array = ['Cancel', 'Exit', 'No'];
-		var b: Number, j: Number;
-		for (b = 0; b < MessageBtnLabels; b++) {
-			for (j = 0; j < aCancelLabels.length; j++) {
-				if (aCancelLabels[j] === MessageBtnLabels[b]) {
 					return b;
 				}
 			}
 		}
+
 		return -1;
 	}
-	*/
 
 	function handleInput(details: InputDetails, pathToFocus: Array): Boolean
 	{
 		//GlobalFunc.getInstance().Deebug("handleInput() for " + details.code + " v " + details.value + " idx " + details.controllerIdx);
-
+		
 		if (GlobalFunc.IsKeyPressed(details)) {
-			if (details.navEquivalent == NavigationCode.TAB) {
-				focusExitOrBackButtonIfPresent();
-				return true;
-			}
-			
-			//fabd: TAB and ESCAPE can't be distinguished :( (may be enabled later with SKSE)
-			/*
-			if (details.navEquivalent == NavigationCode.ESCAPE) {
-				var b: Number = findExitButtonIndex();
-				if (b !== -1) {
-					GameDelegate.call("buttonPress", [b]);
+		
+			var skseKeyDown: Number = skse ? skse.GetLastKeycode(true) : 0;
+			//GlobalFunc.getInstance().Deebug("handleInput() SKSE Key: " + skseKeyDown);
+
+			// the ESC key finds and selects the first exit button (needs SKSE to distinguish Tab from Escape)
+			if (skseKeyDown === MessageBox.SKSE_KEY_ESC) {
+				lastTabIndex = findNextExitButton();
+				if (lastTabIndex !== -1) {
+					var btnId: Number = getButtonId(MessageButtons[lastTabIndex]);
+					GameDelegate.call("buttonPress", [btnId]);
 					return true;
 				}
+			}
+
+			// the TAB key cycles through exit buttons, eg. between "Return" and "Exit"
+			if (details.navEquivalent == NavigationCode.TAB) {
+				findNextExitButton(lastTabIndex);
 				return true;
 			}
-			*/
 		}
 
 		return false;
